@@ -2,10 +2,13 @@ package notify
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"io/ioutil"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -27,11 +30,39 @@ type Receiver struct {
 
 // NewReceiver creates a Receiver using the provided configuration and template.
 func NewReceiver(c *config.ReceiverConfig, t *template.Template) (*Receiver, error) {
-	tp := jira.BasicAuthTransport{
-		Username: c.User,
-		Password: string(c.Password),
+	var baseClient *http.Client
+
+	if c.CAFile != "" {
+		tp := jira.BasicAuthTransport{
+			Username: c.User,
+			Password: string(c.Password),
+		}
+		fmt.Println(tp)
+		caCert, err := ioutil.ReadFile(c.CAFile)
+
+		if err != nil {
+			return nil, err
+		}
+
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		}
+		tp.Transport = tr
+		baseClient = &http.Client{Transport: tr}
+	} else {
+		tp := jira.BasicAuthTransport{
+			Username: c.User,
+			Password: string(c.Password),
+		}
+		baseClient = tp.Client()
 	}
-	client, err := jira.NewClient(tp.Client(), c.APIURL)
+	client, err := jira.NewClient(baseClient, c.APIURL)
+
 	if err != nil {
 		return nil, err
 	}
