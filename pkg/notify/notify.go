@@ -33,11 +33,6 @@ func NewReceiver(c *config.ReceiverConfig, t *template.Template) (*Receiver, err
 	var baseClient *http.Client
 
 	if c.CAFile != "" {
-		tp := jira.BasicAuthTransport{
-			Username: c.User,
-			Password: string(c.Password),
-		}
-		fmt.Println(tp)
 		caCert, err := ioutil.ReadFile(c.CAFile)
 
 		if err != nil {
@@ -52,8 +47,12 @@ func NewReceiver(c *config.ReceiverConfig, t *template.Template) (*Receiver, err
 				RootCAs: caCertPool,
 			},
 		}
-		tp.Transport = tr
-		baseClient = &http.Client{Transport: tr}
+		tp := jira.BasicAuthTransport{
+			Username:  c.User,
+			Password:  string(c.Password),
+			Transport: tr,
+		}
+		baseClient = tp.Client()
 	} else {
 		tp := jira.BasicAuthTransport{
 			Username: c.User,
