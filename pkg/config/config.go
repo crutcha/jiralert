@@ -97,6 +97,7 @@ type ReceiverConfig struct {
 	Fields            map[string]interface{} `yaml:"fields" json:"fields"`
 	Components        []string               `yaml:"components" json:"components"`
 	ReopenDuration    *Duration              `yaml:"reopen_duration" json:"reopen_duration"`
+	CAFile            string                 `yaml:"ca_file" json:"ca_file"`
 
 	// Label copy settings
 	AddGroupLabels bool `yaml:"add_group_labels" json:"add_group_labels"`
@@ -175,6 +176,9 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				return fmt.Errorf("missing password in receiver %q", rc.Name)
 			}
 			rc.Password = c.Defaults.Password
+		}
+		if rc.CAFile == "" && c.Defaults.CAFile != "" {
+			rc.CAFile = c.Defaults.CAFile
 		}
 
 		// Check required issue fields
