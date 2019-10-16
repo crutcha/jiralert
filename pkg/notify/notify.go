@@ -31,6 +31,7 @@ type Receiver struct {
 // NewReceiver creates a Receiver using the provided configuration and template.
 func NewReceiver(c *config.ReceiverConfig, t *template.Template) (*Receiver, error) {
 	var tp jira.BasicAuthTransport
+	var tr http.RoundTripper
 
 	if c.CAFile != "" {
 		caCert, err := ioutil.ReadFile(c.CAFile)
@@ -42,23 +43,18 @@ func NewReceiver(c *config.ReceiverConfig, t *template.Template) (*Receiver, err
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
 
-		tr := &http.Transport{
+		tr = &http.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs: caCertPool,
 			},
 		}
-		tp = jira.BasicAuthTransport{
-			Username:  c.User,
-			Password:  string(c.Password),
-			Transport: tr,
-		}
-	} else {
-		tp = jira.BasicAuthTransport{
-			Username: c.User,
-			Password: string(c.Password),
-		}
 	}
 
+	tp = jira.BasicAuthTransport{
+		Username:  c.User,
+		Password:  string(c.Password),
+		Transport: tr,
+	}
 	client, err := jira.NewClient(tp.Client(), c.APIURL)
 
 	if err != nil {
